@@ -3,13 +3,42 @@
 
 import os
 import sys
+from functools import wraps
 
 from sglang.launch_server import run_server
+from sglang.srt.entrypoints.openai.serving_chat import OpenAIServingChat
 from sglang.srt.layers.logits_processor import should_apply_lm_head_quant_method
 from sglang.srt.models.dspark import DSparkDraftMixin, gather_and_crop_vocab
 from sglang.srt.plugins import load_plugins
 from sglang.srt.server_args import prepare_server_args
 from sglang.srt.utils import kill_process_tree
+
+
+def _enable_qwen_reasoning_effort_compatibility() -> None:
+    """Translate OpenAI ``high`` effort to the Qwen template tier ``xhigh``.
+
+    Codex and the OpenAI SDK used by SGLang 0.5.17 can serialize ``high`` in
+    Responses events, while the Qwen3.8 chat template names the same tier
+    ``xhigh``. Limit the translation to prompt rendering, then restore the
+    request so response metadata continues to use the SDK-compatible value.
+    """
+
+    original_apply_jinja_template = OpenAIServingChat._apply_jinja_template
+
+    @wraps(original_apply_jinja_template)
+    def apply_jinja_template(self, request, tools, is_multimodal):
+        original_effort = request.reasoning_effort
+        if original_effort == "high":
+            request.reasoning_effort = "xhigh"
+
+        try:
+            return original_apply_jinja_template(
+                self, request, tools, is_multimodal
+            )
+        finally:
+            request.reasoning_effort = original_effort
+
+    OpenAIServingChat._apply_jinja_template = apply_jinja_template
 
 
 def _enable_quantized_dspark_lm_head() -> None:
@@ -43,6 +72,7 @@ def _enable_quantized_dspark_lm_head() -> None:
     DSparkDraftMixin.compute_base_logits = compute_base_logits
 
 
+_enable_qwen_reasoning_effort_compatibility()
 _enable_quantized_dspark_lm_head()
 
 
