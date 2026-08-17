@@ -1,5 +1,5 @@
 [Unit]
-Description=Qwen3.8 27B NVFP4 with SGLang and DSpark
+Description=Qwen3.8 27B NVFP4 with SGLang
 After=network-online.target
 Wants=network-online.target
 

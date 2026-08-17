@@ -21,5 +21,5 @@ curl --fail --silent --show-error \
   "${base_url}/responses" \
   -H "Authorization: Bearer ${api_key}" \
   -H "Content-Type: application/json" \
-  --data '{"model":"qwen3.8-27b-nvfp4","input":"Reply with exactly: SGLang DSpark is ready.","max_output_tokens":128}'
+  --data '{"model":"qwen3.8-27b-nvfp4","input":"Reply with exactly: SGLang is ready.","max_output_tokens":128}'
 echo
