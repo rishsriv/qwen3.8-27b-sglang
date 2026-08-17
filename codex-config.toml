@@ -2,7 +2,10 @@
 model = "qwen3.8-27b-nvfp4"
 model_provider = "qwen38_sglang"
 model_reasoning_effort = "medium"
-model_supports_reasoning_summaries = false
+model_supports_reasoning_summaries = true
+model_reasoning_summary = "detailed"
+hide_agent_reasoning = false
+show_raw_agent_reasoning = true
 model_catalog_json = "/home/rishabh-srivastava/qwen/codex-model-catalog.json"
 
 [model_providers.qwen38_sglang]
