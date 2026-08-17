@@ -15,9 +15,9 @@
         "limit": 100000
       },
       "supports_parallel_tool_calls": true,
-      "context_window": 260000,
-      "max_context_window": 260000,
-      "auto_compact_token_limit": 100000,
+      "context_window": 200000,
+      "max_context_window": 200000,
+      "auto_compact_token_limit": 160000,
       "reasoning_summary_format": "none",
       "default_reasoning_summary": "none",
       "default_reasoning_level": "medium",
