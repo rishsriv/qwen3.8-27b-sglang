@@ -12,12 +12,12 @@
       "supports_image_detail_original": false,
       "truncation_policy": {
         "mode": "tokens",
-        "limit": 10000
+        "limit": 100000
       },
       "supports_parallel_tool_calls": true,
-      "context_window": 32768,
-      "max_context_window": 32768,
-      "auto_compact_token_limit": 28672,
+      "context_window": 260000,
+      "max_context_window": 260000,
+      "auto_compact_token_limit": 100000,
       "reasoning_summary_format": "none",
       "default_reasoning_summary": "none",
       "default_reasoning_level": "medium",
@@ -31,7 +31,7 @@
           "description": "Balanced reasoning for everyday coding"
         },
         {
-          "effort": "xhigh",
+          "effort": "high",
           "description": "Deeper reasoning for complex coding tasks"
         }
       ],
