@@ -1,0 +1,13 @@
+# Merge this into ~/.codex/config.toml. Keep the API key in the environment.
+model = "qwen3.8-27b-nvfp4"
+model_provider = "qwen38_sglang"
+model_reasoning_effort = "medium"
+model_supports_reasoning_summaries = false
+model_catalog_json = "/home/rishabh-srivastava/qwen/codex-model-catalog.json"
+
+[model_providers.qwen38_sglang]
+name = "Qwen3.8 27B NVFP4 (SGLang + DSpark)"
+base_url = "https://rishabh-rtx5090.taild7d3df.ts.net/v1"
+env_key = "SGLANG_API_KEY"
+env_key_instructions = "Ask the server owner for the SGLang API key."
+wire_api = "responses"

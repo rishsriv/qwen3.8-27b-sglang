@@ -1,0 +1,16 @@
+[Unit]
+Description=Qwen3.8 27B NVFP4 with SGLang and DSpark
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO_ROOT@
+ExecStart=@REPO_ROOT@/scripts/run-server.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillSignal=SIGINT
+
+[Install]
+WantedBy=default.target

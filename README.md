@@ -1,0 +1,156 @@
+# Qwen3.8-27B NVFP4 on SGLang with DSpark
+
+This repository runs [`RadixArk/Qwen3.8-27B-NVFP4`](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4) on a single NVIDIA RTX 5090 with [SGLang](https://github.com/sgl-project/sglang), accelerated by the [`RadixArk/Qwen3.8-27B-DSpark`](https://huggingface.co/RadixArk/Qwen3.8-27B-DSpark) speculative decoder.
+
+The service exposes SGLang's OpenAI-compatible API, including `/v1/responses` for Codex, at:
+
+```text
+https://rishabh-rtx5090.taild7d3df.ts.net/v1
+```
+
+It is public on the internet through Tailscale Funnel, but every API request requires a bearer token. The token is intentionally not committed to this repository. The launcher reads it into the process environment rather than putting it in the command line.
+
+## Host setup
+
+Prerequisites:
+
+- Linux with an NVIDIA Blackwell GPU and a recent driver
+- Python 3.12 and [`uv`](https://docs.astral.sh/uv/)
+- FFmpeg for the checkpoint's optional audio/video preprocessing
+- Tailscale, if the public HTTPS endpoint is wanted
+
+On Ubuntu, install FFmpeg with:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ffmpeg
+```
+
+Install the pinned SGLang release in an isolated environment:
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python --prerelease=allow -r requirements.txt
+```
+
+The CUDA compiler, NVVM frontend, and CRT pins in `requirements.txt` are
+intentional. Unconstrained prerelease resolution can mix CUDA 13.4 compiler
+components with the CUDA 13.0 headers installed by PyTorch.
+
+Install and start the user service:
+
+```bash
+chmod +x scripts/*.sh
+./scripts/install-service.sh
+journalctl --user -u qwen3.8-sglang.service -f
+```
+
+The first start downloads both Hugging Face checkpoints. The API key is generated once at:
+
+```text
+~/.local/state/qwen3.8-sglang/api-key
+```
+
+Expose the loopback-only server through persistent HTTPS:
+
+```bash
+tailscale funnel --bg --yes 30000
+tailscale funnel status
+```
+
+Check the local API after startup:
+
+```bash
+./scripts/check.sh
+```
+
+To check the public path too:
+
+```bash
+SGLANG_BASE_URL=https://rishabh-rtx5090.taild7d3df.ts.net/v1 ./scripts/check.sh
+```
+
+## Use it from Codex
+
+Codex custom providers use the Responses API. Copy or merge
+[`codex-config.toml`](./codex-config.toml) into `~/.codex/config.toml`; it
+selects this model and makes `medium` the default reasoning effort. Keep
+[`codex-model-catalog.json`](./codex-model-catalog.json) beside this clone and
+update the absolute `model_catalog_json` path in the TOML if the clone lives
+somewhere other than `/home/rishabh-srivastava/qwen`.
+
+Put the server token in the shell environment, then start Codex:
+
+```bash
+export SGLANG_API_KEY='token-provided-by-the-server-owner'
+codex
+```
+
+The important Codex settings are:
+
+```toml
+model = "qwen3.8-27b-nvfp4"
+model_provider = "qwen38_sglang"
+model_reasoning_effort = "medium"
+model_supports_reasoning_summaries = false
+model_catalog_json = "/absolute/path/to/qwen3.8-27b-sglang/codex-model-catalog.json"
+
+[model_providers.qwen38_sglang]
+name = "Qwen3.8 27B NVFP4 (SGLang + DSpark)"
+base_url = "https://rishabh-rtx5090.taild7d3df.ts.net/v1"
+env_key = "SGLANG_API_KEY"
+wire_api = "responses"
+```
+
+The catalog advertises a conservative 32,768-token Codex context and compacts
+at 28,672 tokens. The checkpoint itself advertises 262,144 tokens, but the
+smaller Codex limit leaves reliable headroom on a single 32 GB RTX 5090.
+
+On the server owner account, load the generated token without printing it:
+
+```bash
+export SGLANG_API_KEY="$(<~/.local/state/qwen3.8-sglang/api-key)"
+codex
+```
+
+Codex sends tools to the model through SGLang's direct `/v1/responses` implementation. The deployment deliberately does not place SGLang Model Gateway in front of the server, avoiding an extra tool-schema compatibility layer.
+
+## Runtime compatibility notes
+
+SGLang 0.5.17 is pinned because this deployment was tested end to end on the
+RTX 5090. The launch wrapper also handles three current wheel/runtime details:
+
+- conventional CUDA `lib64` linker names for the wheel-provided runtime and cuBLAS
+- `MAX_JOBS=4` so first-start FlashInfer compilation fits in 61 GiB host RAM
+- a narrow DSpark compatibility shim that sends the packed NVFP4 target LM head
+  through the same quantized logits path used by the normal SGLang sampler
+
+The first successful boot can take several minutes while FlashInfer compiles
+and caches Blackwell kernels. Later restarts reuse that cache and are much
+faster.
+
+## Deployment choices
+
+The launch flags follow SGLang's verified RTX 5090 recipe:
+
+- NVFP4 target weights and FP8 KV cache
+- FlashInfer target and DSpark draft attention
+- DSpark block size 7 (verify width 8)
+- Qwen reasoning and `qwen3_coder` tool parsers
+- one concurrent request and decode CUDA graph batch size 1
+- five persistent Mamba state-cache slots for the single-request service
+- API-key authentication and loopback-only binding
+
+The 32 GB RTX 5090 configuration is optimized for one interactive coding-agent session. Increasing concurrency requires re-deriving the Mamba cache and static-memory settings; simply raising `--max-running-requests` can exhaust the GDN state pool.
+
+## Operations
+
+```bash
+systemctl --user status qwen3.8-sglang.service
+journalctl --user -u qwen3.8-sglang.service -n 200
+systemctl --user restart qwen3.8-sglang.service
+tailscale funnel status
+nvidia-smi
+```
+
+The checkpoint has a native context window of 262,144 tokens, but the practically available context depends on runtime memory use and prompt shape. Validate your real Codex workload before relying on the maximum.
