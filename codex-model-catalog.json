@@ -2,8 +2,8 @@
   "models": [
     {
       "slug": "qwen3.8-27b-nvfp4",
-      "display_name": "Qwen3.8 27B NVFP4 + DSpark",
-      "description": "Qwen3.8 27B served by SGLang with DSpark speculative decoding.",
+      "display_name": "Qwen3.8 27B NVFP4",
+      "description": "Qwen3.8 27B served by SGLang with a context-first configuration.",
       "prefer_websockets": false,
       "support_verbosity": false,
       "apply_patch_tool_type": "freeform",

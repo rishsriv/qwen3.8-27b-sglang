@@ -1,6 +1,6 @@
-# Qwen3.8-27B NVFP4 on SGLang with DSpark
+# Qwen3.8-27B NVFP4 on SGLang
 
-This repository runs [`RadixArk/Qwen3.8-27B-NVFP4`](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4) on a single NVIDIA RTX 5090 with [SGLang](https://github.com/sgl-project/sglang), accelerated by the [`RadixArk/Qwen3.8-27B-DSpark`](https://huggingface.co/RadixArk/Qwen3.8-27B-DSpark) speculative decoder.
+This repository runs [`RadixArk/Qwen3.8-27B-NVFP4`](https://huggingface.co/RadixArk/Qwen3.8-27B-NVFP4) on a single NVIDIA RTX 5090 with [SGLang](https://github.com/sgl-project/sglang). The deployment favors context capacity over speculative-decoding throughput.
 
 The service exposes SGLang's OpenAI-compatible API, including `/v1/responses` for Codex, at:
 
@@ -53,7 +53,7 @@ chmod +x scripts/*.sh
 journalctl --user -u qwen3.8-sglang.service -f
 ```
 
-The first start downloads both Hugging Face checkpoints. The API key is generated once at:
+The first start downloads the Hugging Face checkpoint. The API key is generated once at:
 
 ```text
 ~/.local/state/qwen3.8-sglang/api-key
@@ -108,15 +108,16 @@ model_supports_reasoning_summaries = false
 model_catalog_json = "/absolute/path/to/qwen3.8-27b-sglang/codex-model-catalog.json"
 
 [model_providers.qwen38_sglang]
-name = "Qwen3.8 27B NVFP4 (SGLang + DSpark)"
+name = "Qwen3.8 27B NVFP4 (SGLang)"
 base_url = "http://127.0.0.1:30000/v1"
 env_key = "SGLANG_API_KEY"
 wire_api = "responses"
 ```
 
-The catalog advertises a conservative 32,768-token Codex context and compacts
-at 28,672 tokens. The checkpoint itself advertises 262,144 tokens, but the
-smaller Codex limit leaves reliable headroom on a single 32 GB RTX 5090.
+The checkpoint advertises a 262,144-token context, while the service's
+practical token pool is about 200,000 tokens on a single 32 GB RTX 5090. Set
+the catalog's truncation and automatic-compaction limits conservatively below
+that boundary to retain headroom for generated tokens and runtime variation.
 
 On the server owner account, load the generated token without printing it:
 
@@ -134,8 +135,8 @@ RTX 5090. The launch wrapper also handles three current wheel/runtime details:
 
 - conventional CUDA `lib64` linker names for the wheel-provided runtime and cuBLAS
 - `MAX_JOBS=4` so first-start FlashInfer compilation fits in 61 GiB host RAM
-- a narrow DSpark compatibility shim that sends the packed NVFP4 target LM head
-  through the same quantized logits path used by the normal SGLang sampler
+- a narrow compatibility shim that maps Codex's `high` reasoning effort to the
+  checkpoint template's equivalent `xhigh` tier during prompt rendering
 
 The first successful boot can take several minutes while FlashInfer compiles
 and caches Blackwell kernels. Later restarts reuse that cache and are much
@@ -146,8 +147,8 @@ faster.
 The launch flags follow SGLang's verified RTX 5090 recipe:
 
 - NVFP4 target weights and FP8 KV cache
-- FlashInfer target and DSpark draft attention
-- DSpark block size 7 (verify width 8)
+- FlashInfer attention without a speculative draft model
+- BF16 Mamba state to maximize the practical token pool
 - Qwen reasoning and `qwen3_coder` tool parsers
 - one concurrent request and decode CUDA graph batch size 1
 - five persistent Mamba state-cache slots for the single-request service

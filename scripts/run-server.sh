@@ -46,12 +46,7 @@ exec "${repo_root}/.venv/bin/python" "${repo_root}/scripts/launch.py" \
   --cuda-graph-max-bs-decode 1 \
   --mamba-radix-cache-strategy extra_buffer \
   --max-mamba-cache-size 5 \
-  --mamba-ssm-dtype float32 \
-  --speculative-algorithm DSPARK \
-  --speculative-draft-model-path RadixArk/Qwen3.8-27B-DSpark \
-  --speculative-dspark-block-size 7 \
-  --speculative-draft-model-quantization unquant \
-  --speculative-draft-attention-backend flashinfer \
+  --mamba-ssm-dtype bfloat16 \
   --reasoning-parser qwen3 \
   --tool-call-parser qwen3_coder \
   --log-level warning \
