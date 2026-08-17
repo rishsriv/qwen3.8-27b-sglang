@@ -8,7 +8,15 @@ The service exposes SGLang's OpenAI-compatible API, including `/v1/responses` fo
 https://rishabh-rtx5090.taild7d3df.ts.net/v1
 ```
 
-It is public on the internet through Tailscale Funnel, but every API request requires a bearer token. The token is intentionally not committed to this repository. The launcher reads it into the process environment rather than putting it in the command line.
+It is public on the internet through Tailscale Funnel, but every API request requires a bearer token. The token is intentionally not committed to this repository. The launcher reads it at startup, removes it from the worker environment, and injects it into SGLang internally rather than putting it in the process command line.
+
+The live deployment was verified end to end on August 18, 2026:
+
+- an anonymous request to `/v1/models` returned `401`
+- authenticated `/v1/models` and `/v1/responses` requests returned `200`
+- a public Responses API generation reached `completed`
+- Codex CLI 0.147.0 connected through the custom provider with `medium` reasoning effort
+- a Codex function call was returned in the expected Responses API shape
 
 ## Host setup
 
@@ -64,11 +72,15 @@ Check the local API after startup:
 ./scripts/check.sh
 ```
 
-To check the public path too:
+To check the public path from a machine outside this host's tailnet:
 
 ```bash
 SGLANG_BASE_URL=https://rishabh-rtx5090.taild7d3df.ts.net/v1 ./scripts/check.sh
 ```
+
+On the server itself, use the default loopback check. Tailscale MagicDNS may
+resolve the public hostname to the host's private tailnet address instead of a
+Funnel relay, so an on-host request does not reliably exercise the public path.
 
 ## Use it from Codex
 
