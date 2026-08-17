@@ -75,7 +75,7 @@ Check the local API after startup:
 When Funnel is enabled, check the public path from a machine outside this host's tailnet:
 
 ```bash
-SGLANG_BASE_URL=https://rishabh-rtx5090.taild7d3df.ts.net/v1 ./scripts/check.sh
+SGLANG_BASE_URL=https://<your_host>/v1 ./scripts/check.sh
 ```
 
 On the server itself, use the default loopback check. Tailscale MagicDNS may
