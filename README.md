@@ -5,16 +5,16 @@ This repository runs [`RadixArk/Qwen3.8-27B-NVFP4`](https://huggingface.co/Radix
 The service exposes SGLang's OpenAI-compatible API, including `/v1/responses` for Codex, at:
 
 ```text
-https://rishabh-rtx5090.taild7d3df.ts.net/v1
+http://127.0.0.1:30000/v1
 ```
 
-It is public on the internet through Tailscale Funnel, but every API request requires a bearer token. The token is intentionally not committed to this repository. The launcher reads it at startup, removes it from the worker environment, and injects it into SGLang internally rather than putting it in the process command line.
+The server binds only to loopback and every API request requires a bearer token. The token is intentionally not committed to this repository. The launcher reads it at startup, removes it from the worker environment, and injects it into SGLang internally rather than putting it in the process command line.
 
-The live deployment was verified end to end on August 18, 2026:
+The local deployment was verified end to end on August 18, 2026:
 
-- an anonymous request to `/v1/models` returned `401`
-- authenticated `/v1/models` and `/v1/responses` requests returned `200`
-- a public Responses API generation reached `completed`
+- an anonymous local request to `/v1/models` returned `401`
+- authenticated local `/v1/models` and `/v1/responses` requests returned `200`
+- a local Responses API generation reached `completed`
 - Codex CLI 0.147.0 connected through the custom provider with `medium` reasoning effort
 - a Codex function call was returned in the expected Responses API shape
 
@@ -59,7 +59,7 @@ The first start downloads both Hugging Face checkpoints. The API key is generate
 ~/.local/state/qwen3.8-sglang/api-key
 ```
 
-Expose the loopback-only server through persistent HTTPS:
+Optional: expose the loopback-only server through persistent HTTPS when remote access is needed. The live deployment currently leaves Funnel disabled:
 
 ```bash
 tailscale funnel --bg --yes 30000
@@ -72,7 +72,7 @@ Check the local API after startup:
 ./scripts/check.sh
 ```
 
-To check the public path from a machine outside this host's tailnet:
+When Funnel is enabled, check the public path from a machine outside this host's tailnet:
 
 ```bash
 SGLANG_BASE_URL=https://rishabh-rtx5090.taild7d3df.ts.net/v1 ./scripts/check.sh
@@ -109,7 +109,7 @@ model_catalog_json = "/absolute/path/to/qwen3.8-27b-sglang/codex-model-catalog.j
 
 [model_providers.qwen38_sglang]
 name = "Qwen3.8 27B NVFP4 (SGLang + DSpark)"
-base_url = "https://rishabh-rtx5090.taild7d3df.ts.net/v1"
+base_url = "http://127.0.0.1:30000/v1"
 env_key = "SGLANG_API_KEY"
 wire_api = "responses"
 ```

@@ -7,7 +7,7 @@ model_catalog_json = "/home/rishabh-srivastava/qwen/codex-model-catalog.json"
 
 [model_providers.qwen38_sglang]
 name = "Qwen3.8 27B NVFP4 (SGLang + DSpark)"
-base_url = "https://rishabh-rtx5090.taild7d3df.ts.net/v1"
+base_url = "http://127.0.0.1:30000/v1"
 env_key = "SGLANG_API_KEY"
-env_key_instructions = "Ask the server owner for the SGLang API key."
+env_key_instructions = "Load the local key from ~/.local/state/qwen3.8-sglang/api-key."
 wire_api = "responses"
